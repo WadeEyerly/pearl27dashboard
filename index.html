@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Pearl 27 - Global Impact Dashboard v2.7</title>
+  <script src="https://unpkg.com/globe.gl"></script>
+  <style>
+    body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; }
+    #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+    #logo { position: absolute; top: 20px; left: 20px; pointer-events: auto; }
+    #logo img { height: 70px; width: auto; }
+    #scoreboard {
+      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+      text-align: center; background: rgba(0, 15, 30, 0.9);
+      padding: 10px 40px; border-radius: 50px; border: 2px solid #00ccff;
+      box-shadow: 0 0 20px rgba(0, 204, 255, 0.5); pointer-events: auto;
+    }
+    #score-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #00ccff; margin: 0; }
+    #score-count { font-size: 32px; font-weight: 800; color: #ffffff; margin: 0; }
+    #week-indicator { font-size: 14px; color: #fabe11; font-weight: bold; margin-top: 2px; }
+    #legend {
+      position: absolute; bottom: 30px; right: 20px; pointer-events: auto;
+      background: rgba(0, 15, 30, 0.9); padding: 15px; border-radius: 10px;
+      border: 1px solid #00ccff; width: 340px; max-height: 480px; overflow-y: auto;
+    }
+    .legend-header { display: flex; font-weight: bold; color: #00ccff; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #00ccff33; padding-bottom: 5px; margin-bottom: 8px; }
+    .item { display: flex; align-items: center; margin-bottom: 6px; font-size: 11px; }
+    .col-name { flex: 2; }
+    .col-drum { flex: 1; text-align: center; font-weight: bold; }
+    .col-act { flex: 1; text-align: right; color: #00ccff; font-weight: bold; font-family: monospace; font-size: 14px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    #platform-key { position: absolute; bottom: 30px; left: 20px; background: rgba(0, 15, 30, 0.8); padding: 12px; border-radius: 8px; border: 1px solid #00ccff33; font-size: 11px; pointer-events: auto; }
+  </style>
+</head>
+<body>
+  <div id="ui-layer">
+    <div id="logo"><img src="pearl27-logo.png"></div>
+    <div id="scoreboard">
+      <p id="score-label">Total Jobs Created</p>
+      <p id="score-count">225</p>
+      <div id="week-indicator">Feb Week 1 Impact Stream</div>
+    </div>
+    <div id="platform-key">
+      <div style="margin-bottom:5px; font-weight:bold; color:#00ccff; text-transform: uppercase;">Platform Impact</div>
+      <div><span class="dot" style="background:#ff4500"></span> Reddit</div>
+      <div><span class="dot" style="background:#00ccff"></span> LinkedIn</div>
+      <div><span class="dot" style="background:#ffffff"></span> Facebook</div>
+    </div>
+    <div id="legend">
+      <div class="legend-header"><span style="flex:2">Location</span><span style="flex:1;text-align:center">Drums</span><span style="flex:1;text-align:right">Activity</span></div>
+      <div id="legend-list"></div>
+    </div>
+  </div>
+  <div id="globeViz"></div>
+
+  <script>
+    const JOBS_KPI = 225;
+    const indiaActivity = [172, 306, 543, 249, 258, 210, 315, 420];
+
+    const TIMELINE = [
+      { label: "Feb Week 1", activity: 68, r: 20, li: 19, fb: 29 },
+      { label: "Feb Week 2", activity: 1779, r: 613, li: 444, fb: 722 },
+      { label: "Feb Week 3", activity: 3951, r: 1586, li: 957, fb: 1408 },
+      { label: "Feb Week 4", activity: 4047, r: 1476, li: 1084, fb: 1487 },
+      { label: "Mar Week 5", activity: 4829, r: 1626, li: 1254, fb: 1949 },
+      { label: "Mar Week 6", activity: 6017, r: 1917, li: 2030, fb: 2070 },
+      { label: "Mar Week 7", activity: 6301, r: 1526, li: 2835, fb: 1945 },
+      { label: "Mar Week 8", activity: 5503, r: 1652, li: 2004, fb: 1847 }
+    ];
+
+    const weeklyHubData = {
+      "Nigeria": { d: [0, 15, 16, 16, 17, 17, 17, 16], a: [0, 539, 879, 1101, 1352, 1280, 1344, 1289] },
+      "Ghana": { d: [0, 9, 11, 10, 13, 8, 8, 8], a: [0, 302, 579, 569, 749, 835, 887, 1352] },
+      "Uganda": { d: [1, 8, 8, 8, 8, 9, 9, 8], a: [29, 230, 783, 764, 991, 1474, 1303, 1027] },
+      "DR Congo": { d: [0, 5, 6, 6, 6, 7, 7, 7], a: [0, 264, 579, 557, 617, 952, 1823, 922] },
+      "Kenya": { d: [4, 6, 5, 6, 5, 6, 3, 3], a: [39, 242, 408, 382, 384, 309, 182, 232] },
+      "USA": { d: [0, 3, 2, 2, 2, 2, 1, 2], a: [0, 47, 118, 120, 146, 150, 6, 18] },
+      "Mexico": { d: [0, 3, 3, 2, 2, 1, 2, 1], a: [0, 61, 218, 206, 117, 68, 30, 19] },
+      "Ecuador": { d: [0, 0, 0, 0, 0, 1, 1, 1], a: [0, 0, 0, 0, 0, 202, 386, 345] },
+      "Haiti": { d: [0, 1, 1, 1, 1, 1, 0, 0], a: [0, 76, 300, 214, 232, 251, 0, 0] },
+      "Zimbabwe": { d: [0, 0, 1, 1, 1, 1, 1, 1], a: [0, 0, 33, 89, 116, 118, 193, 200] },
+      "Tonga": { d: [0, 1, 1, 1, 1, 1, 1, 1], a: [0, 18, 54, 45, 70, 129, 114, 99] },
+      "Rwanda": { d: [0, 0, 0, 0, 1, 1, 1, 0], a: [0, 0, 0, 0, 55, 249, 33, 0] }
+    };
+
+    const teamData = [
+      { id: "Philippines", name: "Philippines / Lifewood", lat: 12.87, lng: 121.77, color: '#fabe11', staticDrums: 60 },
+      { id: "Nigeria", name: "Nigeria", lat: 9.08, lng: 8.67, color: '#ffffff', staticDrums: 0 },
+      { id: "India", name: "India / OnPoint", lat: 20.59, lng: 78.96, color: '#fabe11', staticDrums: 25 },
+      { id: "Tonga", name: "Tonga / Spero", lat: -21.17, lng: -175.19, color: '#fabe11', staticDrums: 0 },
+      { id: "Kenya", name: "Kenya", lat: -1.28, lng: 36.81, color: '#ffffff', staticDrums: 0 },
+      { id: "Ghana", name: "Ghana", lat: 7.94, lng: -1.02, color: '#ffffff', staticDrums: 0 },
+      { id: "Uganda", name: "Uganda", lat: 1.37, lng: 32.29, color: '#ffffff', staticDrums: 0 },
+      { id: "USA", name: "USA", lat: 39.82, lng: -98.57, color: '#ffffff', staticDrums: 0 },
+      { id: "DR Congo", name: "DR Congo", lat: -4.03, lng: 21.75, color: '#ffffff', staticDrums: 0 },
+      { id: "Mexico", name: "Mexico", lat: 23.63, lng: -102.55, color: '#ffffff', staticDrums: 0 },
+      { id: "Rwanda", name: "Rwanda", lat: -1.94, lng: 29.87, color: '#ffffff', staticDrums: 0 },
+      { id: "Ecuador", name: "Ecuador", lat: -1.83, lng: -78.18, color: '#ffffff', staticDrums: 0 },
+      { id: "Haiti", name: "Haiti", lat: 18.97, lng: -72.28, color: '#ffffff', staticDrums: 0 },
+      { id: "Zimbabwe", name: "Zimbabwe", lat: -19.01, lng: 29.15, color: '#ffffff', staticDrums: 0 }
+    ];
+
+    const LAND_TARGETS = [{lat:40.7,lng:-74},{lat:51.5,lng:-0.1},{lat:35.6,lng:139.6},{lat:-33.8,lng:151.2},{lat:25.2,lng:55.2}];
+
+    const list = document.getElementById('legend-list');
+    teamData.forEach(d => {
+      list.innerHTML += `<div class="item"><div class="col-name"><span class="dot" style="background:${d.color}"></span><span style="color:${d.color}">${d.name}</span></div><div class="col-drum" id="drums-${d.id}">${d.staticDrums}</div><div class="col-act" id="act-${d.id}">${d.id === 'India' ? '172' : '-'}</div></div>`;
+    });
+
+    let currentIdx = 0;
+    function runUpdate() {
+      const currentWeek = TIMELINE[currentIdx];
+      document.getElementById('score-count').innerText = JOBS_KPI;
+      document.getElementById('week-indicator').innerText = currentWeek.label + " Impact Stream";
+
+      const arcs = [];
+      const rings = [];
+
+      teamData.forEach(hub => {
+        let hubAct = hub.id === 'India' ? indiaActivity[currentIdx] : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
+        let hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
+        
+        document.getElementById(`drums-${hub.id}`).innerText = hubDrums;
+        document.getElementById(`act-${hub.id}`).innerText = hubAct > 0 ? hubAct : '-';
+
+        if (hubDrums > 0) {
+          rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hubDrums });
+        }
+
+        const totalPossible = Math.min(10, Math.ceil(hubAct / 80));
+        if (totalPossible > 0) {
+          const rRatio = currentWeek.r / currentWeek.activity;
+          const liRatio = currentWeek.li / currentWeek.activity;
+          
+          for(let i=0; i<totalPossible; i++) {
+            const t = LAND_TARGETS[Math.floor(Math.random() * LAND_TARGETS.length)];
+            let mColor = '#ffffff'; 
+            if (hub.id === 'India') {
+              mColor = '#ff4500';
+            } else {
+              const rand = Math.random();
+              if (rand < rRatio) mColor = '#ff4500'; 
+              else if (rand < rRatio + liRatio) mColor = '#00ccff'; 
+            }
+            arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: mColor });
+          }
+        }
+      });
+
+      if (typeof world !== 'undefined') {
+        world.ringsData(rings).arcsData(arcs);
+      }
+      currentIdx = (currentIdx + 1) % TIMELINE.length;
+    }
+
+    setInterval(runUpdate, 5000);
+
+    const world = Globe()(document.getElementById('globeViz'))
+      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+      .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8).pointAltitude(0)
+      .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
+      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(1000).arcStroke(0.3).arcColor('color');
+
+    world.controls().autoRotate = true;
+    world.cameraPosition({ z: 400 });
+
+    runUpdate();
+  </script>
+</body>
+</html>
