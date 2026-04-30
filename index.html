@@ -2,13 +2,14 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v2.7</title>
+  <title>Pearl 27 - Global Impact Dashboard v3.2</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; }
     #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
     #logo { position: absolute; top: 20px; left: 20px; pointer-events: auto; }
     #logo img { height: 70px; width: auto; }
+    
     #scoreboard {
       position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
       text-align: center; background: rgba(0, 15, 30, 0.9);
@@ -18,18 +19,28 @@
     #score-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #00ccff; margin: 0; }
     #score-count { font-size: 32px; font-weight: 800; color: #ffffff; margin: 0; }
     #week-indicator { font-size: 14px; color: #fabe11; font-weight: bold; margin-top: 2px; }
+    
     #legend {
-      position: absolute; bottom: 30px; right: 20px; pointer-events: auto;
-      background: rgba(0, 15, 30, 0.9); padding: 15px; border-radius: 10px;
-      border: 1px solid #00ccff; width: 340px; max-height: 480px; overflow-y: auto;
+      position: absolute; bottom: 20px; right: 20px; pointer-events: auto;
+      background: rgba(0, 15, 30, 0.9); padding: 12px; border-radius: 10px;
+      border: 1px solid #00ccff; width: 280px; max-height: 35vh; overflow-y: auto;
     }
-    .legend-header { display: flex; font-weight: bold; color: #00ccff; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #00ccff33; padding-bottom: 5px; margin-bottom: 8px; }
-    .item { display: flex; align-items: center; margin-bottom: 6px; font-size: 11px; }
+    .legend-header { display: flex; font-weight: bold; color: #00ccff; font-size: 9px; text-transform: uppercase; border-bottom: 1px solid #00ccff33; padding-bottom: 5px; margin-bottom: 8px; }
+    .item { display: flex; align-items: center; margin-bottom: 4px; font-size: 10px; }
     .col-name { flex: 2; }
     .col-drum { flex: 1; text-align: center; font-weight: bold; }
-    .col-act { flex: 1; text-align: right; color: #00ccff; font-weight: bold; font-family: monospace; font-size: 14px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-    #platform-key { position: absolute; bottom: 30px; left: 20px; background: rgba(0, 15, 30, 0.8); padding: 12px; border-radius: 8px; border: 1px solid #00ccff33; font-size: 11px; pointer-events: auto; }
+    .col-act { flex: 1; text-align: right; color: #00ccff; font-weight: bold; font-family: monospace; font-size: 12px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    
+    #platform-key { position: absolute; bottom: 20px; left: 20px; background: rgba(0, 15, 30, 0.8); padding: 10px; border-radius: 8px; border: 1px solid #00ccff33; font-size: 10px; pointer-events: auto; }
+
+    /* TV / High-Res Scale Fix */
+    @media screen and (min-width: 1900px) {
+      #legend { width: 240px; }
+      #scoreboard { padding: 5px 30px; }
+      #score-count { font-size: 24px; }
+      #logo img { height: 50px; }
+    }
   </style>
 </head>
 <body>
@@ -108,59 +119,67 @@
     });
 
     let currentIdx = 0;
+
     function runUpdate() {
       const currentWeek = TIMELINE[currentIdx];
-      document.getElementById('score-count').innerText = JOBS_KPI;
-      document.getElementById('week-indicator').innerText = currentWeek.label + " Impact Stream";
+      
+      // Hard reset arcs to kill ghosting
+      if (typeof world !== 'undefined') { world.arcsData([]); }
 
-      const arcs = [];
-      const rings = [];
+      setTimeout(() => {
+        document.getElementById('score-count').innerText = JOBS_KPI;
+        document.getElementById('week-indicator').innerText = currentWeek.label + " Impact Stream";
 
-      teamData.forEach(hub => {
-        let hubAct = hub.id === 'India' ? indiaActivity[currentIdx] : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
-        let hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
-        
-        document.getElementById(`drums-${hub.id}`).innerText = hubDrums;
-        document.getElementById(`act-${hub.id}`).innerText = hubAct > 0 ? hubAct : '-';
+        const arcs = [];
+        const rings = [];
 
-        if (hubDrums > 0) {
-          rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hubDrums });
-        }
-
-        const totalPossible = Math.min(10, Math.ceil(hubAct / 80));
-        if (totalPossible > 0) {
-          const rRatio = currentWeek.r / currentWeek.activity;
-          const liRatio = currentWeek.li / currentWeek.activity;
+        teamData.forEach(hub => {
+          let hubAct = hub.id === 'India' ? indiaActivity[currentIdx] : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
+          let hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
           
-          for(let i=0; i<totalPossible; i++) {
-            const t = LAND_TARGETS[Math.floor(Math.random() * LAND_TARGETS.length)];
-            let mColor = '#ffffff'; 
-            if (hub.id === 'India') {
-              mColor = '#ff4500';
-            } else {
-              const rand = Math.random();
-              if (rand < rRatio) mColor = '#ff4500'; 
-              else if (rand < rRatio + liRatio) mColor = '#00ccff'; 
-            }
-            arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: mColor });
-          }
-        }
-      });
+          document.getElementById(`drums-${hub.id}`).innerText = hubDrums;
+          document.getElementById(`act-${hub.id}`).innerText = hubAct > 0 ? hubAct : '-';
 
-      if (typeof world !== 'undefined') {
-        world.ringsData(rings).arcsData(arcs);
-      }
-      currentIdx = (currentIdx + 1) % TIMELINE.length;
+          if (hubDrums > 0) {
+            rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hubDrums });
+          }
+
+          const totalPossible = Math.min(10, Math.ceil(hubAct / 80));
+          if (totalPossible > 0) {
+            const rRatio = currentWeek.r / currentWeek.activity;
+            const liRatio = currentWeek.li / currentWeek.activity;
+            
+            for(let i=0; i<totalPossible; i++) {
+              const t = LAND_TARGETS[Math.floor(Math.random() * LAND_TARGETS.length)];
+              let mColor = '#ffffff'; 
+              if (hub.id === 'India') {
+                mColor = '#ff4500';
+              } else {
+                const rand = Math.random();
+                if (rand < rRatio) mColor = '#ff4500'; 
+                else if (rand < rRatio + liRatio) mColor = '#00ccff'; 
+              }
+              arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: mColor, id: Math.random() });
+            }
+          }
+        });
+
+        if (typeof world !== 'undefined') {
+          world.ringsData(rings).arcsData(arcs);
+        }
+        currentIdx = (currentIdx + 1) % TIMELINE.length;
+      }, 200); 
     }
 
-    setInterval(runUpdate, 5000);
+    // 9 Second Cycle
+    setInterval(runUpdate, 9000);
 
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
       .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8).pointAltitude(0)
       .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
-      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(1000).arcStroke(0.3).arcColor('color');
+      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color');
 
     world.controls().autoRotate = true;
     world.cameraPosition({ z: 400 });
