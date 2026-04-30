@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v5.5</title>
+  <title>Pearl 27 - Global Impact Dashboard v5.6</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; cursor: pointer; }
@@ -12,7 +12,7 @@
     #scoreboard {
       position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
       text-align: center; background: rgba(0, 15, 30, 0.9);
-      padding: 8px 30px; border-radius: 40px; border: 1.5px solid #00ccff;
+      padding: 8px 30px; border-radius: 40px; border: 2px solid #00ccff;
       box-shadow: 0 0 15px rgba(0, 204, 255, 0.4); pointer-events: auto;
     }
     #score-label { font-size: 8px; text-transform: uppercase; letter-spacing: 1.5px; color: #00ccff; margin: 0; }
@@ -39,7 +39,7 @@
     <div id="scoreboard">
       <p id="score-label">Total Jobs Created</p>
       <p id="score-count">--</p>
-      <div id="week-indicator">Loading Global Impact...</div>
+      <div id="week-indicator">Loading War Room...</div>
     </div>
     <div id="platform-key">
       <div style="margin-bottom:4px; font-weight:bold; color:#00ccff; text-transform: uppercase; font-size: 8px;">Platform Impact</div>
@@ -56,7 +56,6 @@
   <div id="globeViz"></div>
 
   <script>
-    // --- DATA ---
     const TIMELINE = [
       { label: "Feb Week 1", activity: 68, r: 20, li: 19, fb: 29, q: 0 },
       { label: "Feb Week 2", activity: 1779, r: 613, li: 444, fb: 722, q: 0 },
@@ -137,11 +136,18 @@
         document.getElementById(`drums-${hub.id}`).innerText = hDrums;
         document.getElementById(`act-${hub.id}`).innerText = hAct > 0 ? Math.round(hAct) : '-';
 
+        // FORCE RING VISIBILITY
         if (hDrums > 0) {
-          rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, size: Math.sqrt(hDrums) * 2 });
+          rings.push({ 
+              lat: hub.lat, 
+              lng: hub.lng, 
+              color: hub.color, 
+              maxR: Math.sqrt(hDrums) * 1.5 
+          });
         }
 
-        const count = Math.min(10, Math.ceil(hAct / 60));
+        // FORCE ARC VISIBILITY
+        const count = Math.min(10, Math.ceil(hAct / 70));
         for(let i=0; i<count; i++) {
           const t = TARGETS[Math.floor(Math.random() * TARGETS.length)];
           let col = '#ffffff';
@@ -155,13 +161,19 @@
           else if (r < rRatio + liRatio) col = '#00ccff';
           else if (r < rRatio + liRatio + qRatio) col = '#990000'; 
 
-          arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: col });
+          arcs.push({ 
+              startLat: hub.lat, 
+              startLng: hub.lng, 
+              endLat: t.lat, 
+              endLng: t.lng, 
+              color: col 
+          });
         }
       });
 
       document.getElementById('score-count').innerText = totalCount;
 
-      // UPDATE GLOBE LAYERS
+      // HARD PUSH TO GLOBE
       world.ringsData(rings);
       world.arcsData(arcs);
 
@@ -171,17 +183,25 @@
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8)
+      .pointsData(teamData)
+      .pointColor(d => d.color)
+      .pointRadius(0.8)
+      .pointAltitude(0.01) // LIFT OFF SURFACE FOR VISIBILITY
       .ringColor(d => d.color)
-      .ringMaxRadius(d => d.size)
+      .ringMaxRadius(d => d.maxR)
       .ringRepeatPeriod(1000)
-      .arcDashLength(0.4).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.8).arcColor('color')
+      .arcDashLength(0.5)
+      .arcDashGap(2)
+      .arcDashAnimateTime(8000)
+      .arcStroke(0.8) // THICK LINES
+      .arcAltitudeAutoScale(0.5) // HIGH ARCHING MISSILES
+      .arcColor('color')
       .onGlobeClick(() => runUpdate(true));
 
     world.controls().autoRotate = true;
     world.cameraPosition({ z: 400 });
 
-    // START
+    // BOOT
     runUpdate();
     autoCycle = setInterval(runUpdate, 9000);
   </script>
