@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v4.6</title>
+  <title>Pearl 27 - Global Impact Dashboard v4.7</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; cursor: pointer; }
@@ -31,7 +31,6 @@
     .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     #platform-key { position: absolute; bottom: 15px; left: 15px; background: rgba(0, 15, 30, 0.8); padding: 8px; border-radius: 6px; border: 1px solid #00ccff33; font-size: 9px; pointer-events: auto; }
     .key-item { margin-bottom: 2px; display: flex; align-items: center; }
-    #manual-tip { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); font-size: 8px; color: rgba(255,255,255,0.3); text-transform: uppercase; }
 
     @media screen and (min-width: 1900px) {
       #legend { width: 200px; }
@@ -46,7 +45,7 @@
     <div id="scoreboard">
       <p id="score-label">Total Jobs Created</p>
       <p id="score-count">--</p>
-      <div id="week-indicator">Click Globe to Advance</div>
+      <div id="week-indicator">Loading Global Impact...</div>
     </div>
     <div id="platform-key">
       <div style="margin-bottom:4px; font-weight:bold; color:#00ccff; text-transform: uppercase; font-size: 8px;">Platform Impact</div>
@@ -59,12 +58,11 @@
       <div class="legend-header"><span style="flex:2">Location</span><span style="flex:1;text-align:center">Drums</span><span style="flex:1;text-align:right">Activity</span></div>
       <div id="legend-list"></div>
     </div>
-    <div id="manual-tip">Click any hub or the ocean to advance weeks</div>
   </div>
   <div id="globeViz"></div>
 
   <script>
-    // --- DATA ---
+    // --- GLOBAL DATA ---
     const indiaActivity = [172, 306, 543, 249, 258, 210, 315, 420, 315];
     const TIMELINE = [
       { label: "Feb Week 1", activity: 68, r: 20, li: 19, fb: 29, q: 0 },
@@ -118,7 +116,7 @@
 
     const LAND_TARGETS = [{lat:40.7,lng:-74},{lat:51.5,lng:-0.1},{lat:35.6,lng:139.6},{lat:-33.8,lng:151.2},{lat:25.2,lng:55.2}];
 
-    // --- RENDER ENGINE ---
+    // --- ENGINE ---
     const list = document.getElementById('legend-list');
     teamData.forEach(d => {
       list.innerHTML += `<div class="item"><div class="col-name"><span class="dot" style="background:${d.color}"></span><span style="color:${d.color}">${d.name}</span></div><div class="col-drum" id="drums-${d.id}">${d.staticDrums}</div><div class="col-act" id="act-${d.id}">-</div></div>`;
@@ -128,8 +126,10 @@
     let autoTimer;
 
     function runUpdate(manual = false) {
-      // Clear the timer if manually clicked so it doesn't jump twice
-      if (manual) { clearInterval(autoTimer); autoTimer = setInterval(() => runUpdate(), 9000); }
+      if (manual) { 
+        clearInterval(autoTimer); 
+        autoTimer = setInterval(() => runUpdate(), 9000); 
+      }
 
       const currentWeek = TIMELINE[currentIdx];
       if (typeof world !== 'undefined') { world.arcsData([]); }
@@ -141,8 +141,8 @@
         const rings = [];
 
         teamData.forEach(hub => {
-          let hubAct = hub.id === 'India' ? indiaActivity[currentIdx] : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
-          let hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
+          const hubAct = hub.id === 'India' ? indiaActivity[currentIdx] : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
+          const hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
           
           weeklyTotalDrums += hubDrums;
           document.getElementById(`drums-${hub.id}`).innerText = hubDrums;
@@ -161,13 +161,15 @@
             for(let i=0; i<totalPossible; i++) {
               const t = LAND_TARGETS[Math.floor(Math.random() * LAND_TARGETS.length)];
               let mColor = '#ffffff'; 
+              const rand = Math.random();
               if (hub.id === 'India') {
                 mColor = '#ff4500';
-              } else {
-                const rand = Math.random();
-                if (rand < rRatio) mColor = '#ff4500'; 
-                else if (rand < rRatio + liRatio) mColor = '#00ccff';
-                else if (rand < rRatio + liRatio + qRatio) mColor = '#990000'; 
+              } else if (rand < rRatio) {
+                mColor = '#ff4500'; 
+              } else if (rand < rRatio + liRatio) {
+                mColor = '#00ccff';
+              } else if (rand < rRatio + liRatio + qRatio) {
+                mColor = '#990000';
               }
               arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: mColor, id: Math.random() });
             }
@@ -175,26 +177,25 @@
         });
 
         document.getElementById('score-count').innerText = weeklyTotalDrums;
-        if (typeof world !== 'undefined') { world.ringsData(rings).arcDashOffset(0).arcsData(arcs); }
+        if (typeof world !== 'undefined') { 
+          world.ringsData(rings).arcDashOffset(0).arcsData(arcs); 
+        }
 
-        // Increment Global Index
         currentIdx = (currentIdx + 1) % TIMELINE.length;
       }, 200); 
     }
 
-    // --- INITIALIZE GLOBE ---
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
       .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8).pointAltitude(0)
       .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
       .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color')
-      .onGlobeClick(() => runUpdate(true)); // ENABLE MANUAL ADVANCE ON CLICK
+      .onGlobeClick(() => runUpdate(true));
       
     world.controls().autoRotate = true;
     world.cameraPosition({ z: 400 });
 
-    // Start Initial State
     runUpdate();
     autoTimer = setInterval(() => runUpdate(), 9000);
   </script>
