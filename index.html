@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v5.1</title>
+  <title>Pearl 27 - Global Impact Dashboard v5.2</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; cursor: pointer; }
@@ -39,7 +39,7 @@
     <div id="scoreboard">
       <p id="score-label">Total Jobs Created</p>
       <p id="score-count">--</p>
-      <div id="week-indicator">Initializing...</div>
+      <div id="week-indicator">Loading Global Impact...</div>
     </div>
     <div id="platform-key">
       <div style="margin-bottom:4px; font-weight:bold; color:#00ccff; text-transform: uppercase; font-size: 8px;">Platform Impact</div>
@@ -56,7 +56,6 @@
   <div id="globeViz"></div>
 
   <script>
-    // --- CUMULATIVE DATASETS ---
     const TIMELINE = [
       { label: "Feb Week 1", activity: 68, r: 20, li: 19, fb: 29, q: 0 },
       { label: "Feb Week 2", activity: 1779, r: 613, li: 444, fb: 722, q: 0 },
@@ -123,7 +122,12 @@
       if (manual) { clearInterval(timer); timer = setInterval(runUpdate, 9000); }
 
       const week = TIMELINE[currentIdx];
-      if (window.world) { world.arcsData([]); }
+      
+      // Safety: Wipe old frames
+      if (window.world) {
+          world.arcsData([]);
+          world.ringsData([]);
+      }
 
       setTimeout(() => {
         document.getElementById('week-indicator').innerText = week.label;
@@ -139,10 +143,14 @@
           document.getElementById(`drums-${hub.id}`).innerText = hDrums;
           document.getElementById(`act-${hub.id}`).innerText = hAct > 0 ? Math.round(hAct) : '-';
 
-          if (hDrums > 0) rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hDrums });
+          // Add Echoing Rings
+          if (hDrums > 0) {
+              rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hDrums });
+          }
 
-          const missileCount = Math.min(10, Math.ceil(hAct / 75));
-          for(let i=0; i < missileCount; i++) {
+          // Add Missiles
+          const count = Math.min(10, Math.ceil(hAct / 70));
+          for(let i=0; i < count; i++) {
             const t = TARGETS[Math.floor(Math.random() * TARGETS.length)];
             let col = '#ffffff';
             const r = Math.random();
@@ -160,7 +168,13 @@
         });
 
         document.getElementById('score-count').innerText = weeklyTotalDrums;
-        if (window.world) world.ringsData(rings).arcDashOffset(0).arcsData(arcs);
+        
+        // Push the visual data back to the engine
+        if (window.world) {
+            world.ringsData(rings)
+                 .arcDashOffset(0)
+                 .arcsData(arcs);
+        }
 
         currentIdx = (currentIdx + 1) % TIMELINE.length;
       }, 150); 
@@ -169,9 +183,19 @@
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.5).pointAltitude(0)
-      .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
-      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color')
+      .pointsData(teamData)
+      .pointColor(d => d.color)
+      .pointRadius(0.7)
+      .pointAltitude(0)
+      .ringsData([])
+      .ringColor(d => d.color)
+      .ringMaxRadius(d => Math.sqrt(d.count) * 1.0) // Restored scaled growth
+      .ringRepeatPeriod(1400)
+      .arcDashLength(0.5)
+      .arcDashGap(2)
+      .arcDashAnimateTime(8000)
+      .arcStroke(0.5) // Increased visibility
+      .arcColor('color')
       .onGlobeClick(() => runUpdate(true));
 
     world.controls().autoRotate = true;
