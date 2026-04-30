@@ -2,44 +2,45 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v3.2</title>
+  <title>Pearl 27 - Global Impact Dashboard v3.3</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; }
     #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
-    #logo { position: absolute; top: 20px; left: 20px; pointer-events: auto; }
-    #logo img { height: 70px; width: auto; }
+    
+    #logo { position: absolute; top: 15px; left: 15px; pointer-events: auto; }
+    #logo img { height: 50px; width: auto; }
     
     #scoreboard {
-      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+      position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
       text-align: center; background: rgba(0, 15, 30, 0.9);
-      padding: 10px 40px; border-radius: 50px; border: 2px solid #00ccff;
-      box-shadow: 0 0 20px rgba(0, 204, 255, 0.5); pointer-events: auto;
+      padding: 8px 30px; border-radius: 40px; border: 1.5px solid #00ccff;
+      box-shadow: 0 0 15px rgba(0, 204, 255, 0.4); pointer-events: auto;
     }
-    #score-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #00ccff; margin: 0; }
-    #score-count { font-size: 32px; font-weight: 800; color: #ffffff; margin: 0; }
-    #week-indicator { font-size: 14px; color: #fabe11; font-weight: bold; margin-top: 2px; }
+    #score-label { font-size: 8px; text-transform: uppercase; letter-spacing: 1.5px; color: #00ccff; margin: 0; }
+    #score-count { font-size: 24px; font-weight: 800; color: #ffffff; margin: 0; line-height: 1; }
+    #week-indicator { font-size: 11px; color: #fabe11; font-weight: bold; margin-top: 2px; }
     
     #legend {
-      position: absolute; bottom: 20px; right: 20px; pointer-events: auto;
-      background: rgba(0, 15, 30, 0.9); padding: 12px; border-radius: 10px;
-      border: 1px solid #00ccff; width: 280px; max-height: 35vh; overflow-y: auto;
+      position: absolute; bottom: 15px; right: 15px; pointer-events: auto;
+      background: rgba(0, 15, 30, 0.9); padding: 10px; border-radius: 8px;
+      border: 1px solid #00ccff; width: 230px; max-height: 30vh; overflow-y: auto;
     }
-    .legend-header { display: flex; font-weight: bold; color: #00ccff; font-size: 9px; text-transform: uppercase; border-bottom: 1px solid #00ccff33; padding-bottom: 5px; margin-bottom: 8px; }
-    .item { display: flex; align-items: center; margin-bottom: 4px; font-size: 10px; }
+    .legend-header { display: flex; font-weight: bold; color: #00ccff; font-size: 8px; text-transform: uppercase; border-bottom: 1px solid #00ccff33; padding-bottom: 4px; margin-bottom: 6px; }
+    .item { display: flex; align-items: center; margin-bottom: 3px; font-size: 9px; }
     .col-name { flex: 2; }
     .col-drum { flex: 1; text-align: center; font-weight: bold; }
-    .col-act { flex: 1; text-align: right; color: #00ccff; font-weight: bold; font-family: monospace; font-size: 12px; }
-    .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .col-act { flex: 1; text-align: right; color: #00ccff; font-weight: bold; font-family: monospace; font-size: 11px; }
+    .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     
-    #platform-key { position: absolute; bottom: 20px; left: 20px; background: rgba(0, 15, 30, 0.8); padding: 10px; border-radius: 8px; border: 1px solid #00ccff33; font-size: 10px; pointer-events: auto; }
+    #platform-key { position: absolute; bottom: 15px; left: 15px; background: rgba(0, 15, 30, 0.8); padding: 8px; border-radius: 6px; border: 1px solid #00ccff33; font-size: 9px; pointer-events: auto; }
+    .key-item { margin-bottom: 2px; display: flex; align-items: center; }
 
-    /* TV / High-Res Scale Fix */
+    /* TV / High-Res Scaling Override */
     @media screen and (min-width: 1900px) {
-      #legend { width: 240px; }
-      #scoreboard { padding: 5px 30px; }
-      #score-count { font-size: 24px; }
-      #logo img { height: 50px; }
+      #legend { width: 200px; }
+      #scoreboard { padding: 6px 20px; }
+      #score-count { font-size: 20px; }
     }
   </style>
 </head>
@@ -52,10 +53,10 @@
       <div id="week-indicator">Feb Week 1 Impact Stream</div>
     </div>
     <div id="platform-key">
-      <div style="margin-bottom:5px; font-weight:bold; color:#00ccff; text-transform: uppercase;">Platform Impact</div>
-      <div><span class="dot" style="background:#ff4500"></span> Reddit</div>
-      <div><span class="dot" style="background:#00ccff"></span> LinkedIn</div>
-      <div><span class="dot" style="background:#ffffff"></span> Facebook</div>
+      <div style="margin-bottom:4px; font-weight:bold; color:#00ccff; text-transform: uppercase; font-size: 8px;">Platform Impact</div>
+      <div class="key-item"><span class="dot" style="background:#ff4500"></span> Reddit</div>
+      <div class="key-item"><span class="dot" style="background:#00ccff"></span> LinkedIn</div>
+      <div class="key-item"><span class="dot" style="background:#ffffff"></span> Facebook</div>
     </div>
     <div id="legend">
       <div class="legend-header"><span style="flex:2">Location</span><span style="flex:1;text-align:center">Drums</span><span style="flex:1;text-align:right">Activity</span></div>
@@ -122,8 +123,6 @@
 
     function runUpdate() {
       const currentWeek = TIMELINE[currentIdx];
-      
-      // Hard reset arcs to kill ghosting
       if (typeof world !== 'undefined') { world.arcsData([]); }
 
       setTimeout(() => {
@@ -171,7 +170,6 @@
       }, 200); 
     }
 
-    // 9 Second Cycle
     setInterval(runUpdate, 9000);
 
     const world = Globe()(document.getElementById('globeViz'))
