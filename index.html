@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v4.4</title>
+  <title>Pearl 27 - Global Impact Dashboard v4.5</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; }
@@ -122,23 +122,22 @@
     });
 
     let currentIdx = 0;
-
     function runUpdate() {
       const currentWeek = TIMELINE[currentIdx];
       if (typeof world !== 'undefined') { world.arcsData([]); }
 
       setTimeout(() => {
         document.getElementById('week-indicator').innerText = currentWeek.label;
+        let weeklyTotalDrums = 0;
 
         const arcs = [];
         const rings = [];
-        let totalHiresThisWeek = 0; // The counter for our auto-sum
 
         teamData.forEach(hub => {
           let hubAct = hub.id === 'India' ? indiaActivity[currentIdx] : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
           let hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
           
-          totalHiresThisWeek += hubDrums; // Add this hub's drummers to the total
+          weeklyTotalDrums += hubDrums;
 
           document.getElementById(`drums-${hub.id}`).innerText = hubDrums;
           document.getElementById(`act-${hub.id}`).innerText = hubAct > 0 ? Math.round(hubAct) : '-';
@@ -161,16 +160,15 @@
               } else {
                 const rand = Math.random();
                 if (rand < rRatio) mColor = '#ff4500'; 
-                else if (rand < liRatio + rRatio) mColor = '#00ccff';
-                else if (rand < liRatio + rRatio + qRatio) mColor = '#990000'; 
+                else if (rand < rRatio + liRatio) mColor = '#00ccff';
+                else if (rand < rRatio + liRatio + qRatio) mColor = '#990000'; 
               }
               arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: mColor, id: Math.random() });
             }
           }
         });
 
-        // Update the Scoreboard with the calculated sum
-        document.getElementById('score-count').innerText = totalHiresThisWeek;
+        document.getElementById('score-count').innerText = weeklyTotalDrums;
 
         if (typeof world !== 'undefined') {
           world.ringsData(rings).arcDashOffset(0).arcsData(arcs);
