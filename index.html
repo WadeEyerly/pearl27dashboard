@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v5.0</title>
+  <title>Pearl 27 - Global Impact Dashboard v5.1</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; cursor: pointer; }
@@ -39,7 +39,7 @@
     <div id="scoreboard">
       <p id="score-label">Total Jobs Created</p>
       <p id="score-count">--</p>
-      <div id="week-indicator">Syncing Growth...</div>
+      <div id="week-indicator">Initializing...</div>
     </div>
     <div id="platform-key">
       <div style="margin-bottom:4px; font-weight:bold; color:#00ccff; text-transform: uppercase; font-size: 8px;">Platform Impact</div>
@@ -56,6 +56,7 @@
   <div id="globeViz"></div>
 
   <script>
+    // --- CUMULATIVE DATASETS ---
     const TIMELINE = [
       { label: "Feb Week 1", activity: 68, r: 20, li: 19, fb: 29, q: 0 },
       { label: "Feb Week 2", activity: 1779, r: 613, li: 444, fb: 722, q: 0 },
@@ -70,7 +71,6 @@
 
     const indiaActivity = [172, 306, 543, 249, 258, 210, 315, 420, 315];
 
-    // UPDATED: Cumulative drumming data based on hired dates
     const weeklyHubData = {
       "Haiti": { d: [1, 1, 1, 1, 1, 1, 1, 1, 1], a: [0, 76, 300, 214, 232, 251, 0, 0, 6] },
       "Mexico": { d: [3, 3, 3, 3, 3, 4, 4, 4, 4], a: [0, 61, 218, 206, 117, 68, 30, 19, 72] },
@@ -112,8 +112,8 @@
     const TARGETS = [{lat:40.7,lng:-74},{lat:51.5,lng:-0.1},{lat:35.6,lng:139.6},{lat:-33.8,lng:151.2},{lat:25.2,lng:55.2}];
 
     const list = document.getElementById('legend-list');
-    teamData.forEach(d => {
-      list.innerHTML += `<div class="item"><div class="col-name"><span class="dot" style="background:${d.color}"></span><span style="color:${d.color}">${d.name}</span></div><div class="col-drum" id="drums-${d.id}">0</div><div class="col-act" id="act-${d.id}">-</div></div>`;
+    teamData.forEach(hub => {
+      list.innerHTML += `<div class="item"><div class="col-name"><span class="dot" style="background:${hub.color}"></span><span style="color:${hub.color}">${hub.name}</span></div><div class="col-drum" id="drums-${hub.id}">0</div><div class="col-act" id="act-${hub.id}">-</div></div>`;
     });
 
     let currentIdx = 0;
@@ -123,7 +123,7 @@
       if (manual) { clearInterval(timer); timer = setInterval(runUpdate, 9000); }
 
       const week = TIMELINE[currentIdx];
-      if (window.world) world.arcsData([]);
+      if (window.world) { world.arcsData([]); }
 
       setTimeout(() => {
         document.getElementById('week-indicator').innerText = week.label;
@@ -132,16 +132,16 @@
         const rings = [];
 
         teamData.forEach(hub => {
-          let hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
-          let hubAct = hub.id === 'India' ? (indiaActivity[currentIdx] || 0) : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
+          let hDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
+          let hAct = hub.id === 'India' ? (indiaActivity[currentIdx] || 0) : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
           
-          weeklyTotalDrums += hubDrums;
-          document.getElementById(`drums-${hub.id}`).innerText = hubDrums;
-          document.getElementById(`act-${hub.id}`).innerText = hubAct > 0 ? Math.round(hubAct) : '-';
+          weeklyTotalDrums += hDrums;
+          document.getElementById(`drums-${hub.id}`).innerText = hDrums;
+          document.getElementById(`act-${hub.id}`).innerText = hAct > 0 ? Math.round(hAct) : '-';
 
-          if (hubDrums > 0) rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hubDrums });
+          if (hDrums > 0) rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hDrums });
 
-          const missileCount = Math.min(10, Math.ceil(hubAct / 75));
+          const missileCount = Math.min(10, Math.ceil(hAct / 75));
           for(let i=0; i < missileCount; i++) {
             const t = TARGETS[Math.floor(Math.random() * TARGETS.length)];
             let col = '#ffffff';
@@ -169,7 +169,7 @@
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.6).pointAltitude(0)
+      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.5).pointAltitude(0)
       .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
       .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color')
       .onGlobeClick(() => runUpdate(true));
