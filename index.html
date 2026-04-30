@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v4.3</title>
+  <title>Pearl 27 - Global Impact Dashboard v4.4</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; }
@@ -44,7 +44,7 @@
     <div id="logo"><img src="pearl27-logo.png"></div>
     <div id="scoreboard">
       <p id="score-label">Total Jobs Created</p>
-      <p id="score-count">437</p>
+      <p id="score-count">--</p>
       <div id="week-indicator">Initializing...</div>
     </div>
     <div id="platform-key">
@@ -62,7 +62,6 @@
   <div id="globeViz"></div>
 
   <script>
-    const JOBS_KPI = 437;
     const indiaActivity = [172, 306, 543, 249, 258, 210, 315, 420, 315];
 
     const TIMELINE = [
@@ -86,9 +85,9 @@
       "DR Congo": { d: [0, 5, 6, 6, 6, 7, 7, 7, 11], a: [0, 264, 579, 557, 617, 952, 1823, 922, 285] },
       "USA": { d: [0, 3, 2, 2, 2, 2, 1, 2, 20], a: [0, 47, 118, 120, 146, 150, 6, 18, 88] },
       "Mexico": { d: [0, 3, 3, 2, 2, 1, 2, 1, 4], a: [0, 61, 218, 206, 117, 68, 30, 19, 72] },
-      "Congo": { d: [0,0,0,0,0,0,0,0, 2], a: [0,0,0,0,0,0,0,0, 71] },
-      "Tanzania": { d: [0,0,0,0,0,0,0,0, 1], a: [0,0,0,0,0,0,0,0, 31] },
-      "Bostwana": { d: [0,0,0,0,0,0,0,0, 1], a: [0,0,0,0,0,0,0,0, 3] },
+      "Congo": { d: [0, 0, 0, 0, 0, 0, 0, 0, 2], a: [0, 0, 0, 0, 0, 0, 0, 0, 71] },
+      "Tanzania": { d: [0, 0, 0, 0, 0, 0, 0, 0, 1], a: [0, 0, 0, 0, 0, 0, 0, 0, 31] },
+      "Bostwana": { d: [0, 0, 0, 0, 0, 0, 0, 0, 1], a: [0, 0, 0, 0, 0, 0, 0, 0, 3] },
       "Ecuador": { d: [0, 0, 0, 0, 0, 1, 1, 1, 1], a: [0, 0, 0, 0, 0, 202, 386, 345, 0] },
       "Haiti": { d: [0, 1, 1, 1, 1, 1, 0, 0, 1], a: [0, 76, 300, 214, 232, 251, 0, 0, 6] },
       "Tonga": { d: [0, 1, 1, 1, 1, 1, 1, 1, 1], a: [0, 18, 54, 45, 70, 129, 114, 99, 0] },
@@ -126,23 +125,21 @@
 
     function runUpdate() {
       const currentWeek = TIMELINE[currentIdx];
-      
-      // RE-ANCHOR: Clear and hard reset offset before loading new data
-      if (typeof world !== 'undefined') { 
-        world.arcsData([]);
-      }
+      if (typeof world !== 'undefined') { world.arcsData([]); }
 
       setTimeout(() => {
-        document.getElementById('score-count').innerText = JOBS_KPI;
         document.getElementById('week-indicator').innerText = currentWeek.label;
 
         const arcs = [];
         const rings = [];
+        let totalHiresThisWeek = 0; // The counter for our auto-sum
 
         teamData.forEach(hub => {
           let hubAct = hub.id === 'India' ? indiaActivity[currentIdx] : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
           let hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
           
+          totalHiresThisWeek += hubDrums; // Add this hub's drummers to the total
+
           document.getElementById(`drums-${hub.id}`).innerText = hubDrums;
           document.getElementById(`act-${hub.id}`).innerText = hubAct > 0 ? Math.round(hubAct) : '-';
 
@@ -164,41 +161,33 @@
               } else {
                 const rand = Math.random();
                 if (rand < rRatio) mColor = '#ff4500'; 
-                else if (rand < rRatio + liRatio) mColor = '#00ccff';
-                else if (rand < rRatio + liRatio + qRatio) mColor = '#990000'; 
+                else if (rand < liRatio + rRatio) mColor = '#00ccff';
+                else if (rand < liRatio + rRatio + qRatio) mColor = '#990000'; 
               }
-              // Unique IDs ensure each missile is treated as a new launch from hub lat/lng
               arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: mColor, id: Math.random() });
             }
           }
         });
 
+        // Update the Scoreboard with the calculated sum
+        document.getElementById('score-count').innerText = totalHiresThisWeek;
+
         if (typeof world !== 'undefined') {
-          world.ringsData(rings)
-               .arcDashOffset(0) // Forces all new missiles back to origin (0)
-               .arcsData(arcs);
+          world.ringsData(rings).arcDashOffset(0).arcsData(arcs);
         }
-
         currentIdx = (currentIdx + 1) % TIMELINE.length;
-
-      }, 100); 
+      }, 200); 
     }
 
     setInterval(runUpdate, 9000);
-
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
       .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8).pointAltitude(0)
       .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
-      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000)
-      .arcStroke(0.3) // Precision missile weight
-      .arcColor('color')
-      .arcDashOffset(0);
-      
+      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color');
     world.controls().autoRotate = true;
     world.cameraPosition({ z: 400 });
-
     runUpdate();
   </script>
 </body>
