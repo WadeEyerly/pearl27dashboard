@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v4.8</title>
+  <title>Pearl 27 - Global Impact Dashboard v4.9</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; cursor: pointer; }
@@ -39,7 +39,7 @@
     <div id="scoreboard">
       <p id="score-label">Total Jobs Created</p>
       <p id="score-count">--</p>
-      <div id="week-indicator">Syncing Dashboard...</div>
+      <div id="week-indicator">Waiting for Engine...</div>
     </div>
     <div id="platform-key">
       <div style="margin-bottom:4px; font-weight:bold; color:#00ccff; text-transform: uppercase; font-size: 8px;">Platform Impact</div>
@@ -56,7 +56,7 @@
   <div id="globeViz"></div>
 
   <script>
-    // --- TIMELINE DATA (9 WEEKS) ---
+    // --- SAFE DATASETS ---
     const TIMELINE = [
       { label: "Feb Week 1", activity: 68, r: 20, li: 19, fb: 29, q: 0 },
       { label: "Feb Week 2", activity: 1779, r: 613, li: 444, fb: 722, q: 0 },
@@ -80,13 +80,13 @@
       "DR Congo": { d: [0, 5, 6, 6, 6, 7, 7, 7, 11], a: [0, 264, 579, 557, 617, 952, 1823, 922, 285] },
       "USA": { d: [0, 3, 2, 2, 2, 2, 1, 2, 20], a: [0, 47, 118, 120, 146, 150, 6, 18, 88] },
       "Mexico": { d: [0, 3, 3, 2, 2, 1, 2, 1, 4], a: [0, 61, 218, 206, 117, 68, 30, 19, 72] },
-      "Congo": { d: [0, 0, 0, 0, 0, 0, 0, 0, 2], a: [0, 0, 0, 0, 0, 0, 0, 0, 71] },
-      "Tanzania": { d: [0, 0, 0, 0, 0, 0, 0, 0, 1], a: [0, 0, 0, 0, 0, 0, 0, 0, 31] },
-      "Bostwana": { d: [0, 0, 0, 0, 0, 0, 0, 0, 1], a: [0, 0, 0, 0, 0, 0, 0, 0, 3] },
-      "Ecuador": { d: [0, 0, 0, 0, 0, 1, 1, 1, 1], a: [0, 0, 0, 0, 0, 202, 386, 345, 0] },
-      "Haiti": { d: [0, 1, 1, 1, 1, 1, 0, 0, 1], a: [0, 76, 300, 214, 232, 251, 0, 0, 6] },
-      "Tonga": { d: [0, 1, 1, 1, 1, 1, 1, 1, 1], a: [0, 18, 54, 45, 70, 129, 114, 99, 0] },
-      "Zimbabwe": { d: [0, 0, 1, 1, 1, 1, 1, 1, 1], a: [0, 0, 33, 89, 116, 118, 193, 200, 0] }
+      "Congo": { d: [0,0,0,0,0,0,0,0, 2], a: [0,0,0,0,0,0,0,0, 71] },
+      "Tanzania": { d: [0,0,0,0,0,0,0,0, 1], a: [0,0,0,0,0,0,0,0, 31] },
+      "Bostwana": { d: [0,0,0,0,0,0,0,0, 1], a: [0,0,0,0,0,0,0,0, 3] },
+      "Ecuador": { d: [0,0,0,0,0,1,1,1, 1], a: [0,0,0,0,0,202,386,345, 0] },
+      "Haiti": { d: [0,1,1,1,1,1,0,0, 1], a: [0,76,300,214,232,251,0,0, 6] },
+      "Tonga": { d: [0,1,1,1,1,1,1,1, 1], a: [0,18,54,45,70,129,114,99, 0] },
+      "Zimbabwe": { d: [0,0,1,1,1,1,1,1, 1], a: [0,0,33,89,116,118,193,200, 0] }
     };
 
     const teamData = [
@@ -111,81 +111,89 @@
 
     const TARGETS = [{lat:40.7,lng:-74},{lat:51.5,lng:-0.1},{lat:35.6,lng:139.6},{lat:-33.8,lng:151.2},{lat:25.2,lng:55.2}];
 
-    // Legend Initialization
-    const legend = document.getElementById('legend-list');
-    teamData.forEach(hub => {
-      legend.innerHTML += `<div class="item"><div class="col-name"><span class="dot" style="background:${hub.color}"></span><span style="color:${hub.color}">${hub.name}</span></div><div class="col-drum" id="drums-${hub.id}">0</div><div class="col-act" id="act-${hub.id}">-</div></div>`;
+    // --- SETUP UI ---
+    const list = document.getElementById('legend-list');
+    teamData.forEach(d => {
+      list.innerHTML += `<div class="item"><div class="col-name"><span class="dot" style="background:${d.color}"></span><span style="color:${d.color}">${d.name}</span></div><div class="col-drum" id="drums-${d.id}">0</div><div class="col-act" id="act-${d.id}">-</div></div>`;
     });
 
-    let idx = 0;
+    let currentIdx = 0;
     let timer;
 
-    function update(manual = false) {
-      if (manual) { clearInterval(timer); timer = setInterval(update, 9000); }
+    // --- MAIN UPDATE FUNCTION ---
+    function runUpdate(manual = false) {
+      if (!window.myWorld) return; // Wait until globe is ready
+      if (manual) { clearInterval(timer); timer = setInterval(runUpdate, 9000); }
 
-      const week = TIMELINE[idx];
-      if (!week) { idx = 0; return update(); } // Absolute loop safety
+      const week = TIMELINE[currentIdx];
+      
+      // Clear data to prevent ghosting
+      window.myWorld.arcsData([]);
 
-      // Clean arcs
-      if (window.world) world.arcsData([]);
-
+      // Brief delay to allow the GPU to clear the previous frame
       setTimeout(() => {
         document.getElementById('week-indicator').innerText = week.label;
-        let totalDrums = 0;
-        const newArcs = [];
-        const newRings = [];
+        let weeklyTotalDrums = 0;
+        const arcs = [];
+        const rings = [];
 
         teamData.forEach(hub => {
-          // Safety: check if data exists for this index
-          const hDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[idx] || 0));
-          const hAct = hub.id === 'India' ? (indiaActivity[idx] || 0) : (weeklyHubData[hub.id]?.a[idx] || 0);
+          // SAFE DATA CHECK: Use OR 0 if the week index is missing for a country
+          let hubDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
+          let hubAct = hub.id === 'India' ? (indiaActivity[currentIdx] || 0) : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
+          
+          weeklyTotalDrums += hubDrums;
+          document.getElementById(`drums-${hub.id}`).innerText = hubDrums;
+          document.getElementById(`act-${hub.id}`).innerText = hubAct > 0 ? Math.round(hubAct) : '-';
 
-          totalDrums += hDrums;
-          document.getElementById(`drums-${hub.id}`).innerText = hDrums;
-          document.getElementById(`act-${hub.id}`).innerText = hAct > 0 ? Math.round(hAct) : '-';
+          if (hubDrums > 0) rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hubDrums });
 
-          if (hDrums > 0) newRings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, count: hDrums });
-
-          // Missiles
-          const count = Math.min(10, Math.ceil(hAct / 75));
-          for(let i=0; i<count; i++) {
-            const t = TARGETS[Math.floor(Math.random()*TARGETS.length)];
+          const missileCount = Math.min(10, Math.ceil(hubAct / 75));
+          for(let i=0; i < missileCount; i++) {
+            const t = TARGETS[Math.floor(Math.random() * TARGETS.length)];
             let col = '#ffffff';
             const r = Math.random();
-            const rRatio = week.r/week.activity;
-            const liRatio = week.li/week.activity;
-            const qRatio = (week.q||0)/week.activity;
+            const rRatio = week.r / week.activity;
+            const liRatio = week.li / week.activity;
+            const qRatio = (week.q || 0) / week.activity;
 
             if (hub.id === 'India') col = '#ff4500';
-            else if (r < rRatio) col = '#ff4500';
+            else if (r < rRatio) col = '#ff4500'; 
             else if (r < rRatio + liRatio) col = '#00ccff';
-            else if (r < rRatio + liRatio + qRatio) col = '#990000';
+            else if (r < rRatio + liRatio + qRatio) col = '#990000'; 
 
-            newArcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: col });
+            arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: col });
           }
         });
 
-        document.getElementById('score-count').innerText = totalDrums;
-        if (window.world) world.ringsData(newRings).arcsData(newArcs);
-        
-        idx = (idx + 1) % TIMELINE.length;
-      }, 150);
+        document.getElementById('score-count').innerText = weeklyTotalDrums;
+        window.myWorld.ringsData(rings).arcDashOffset(0).arcsData(arcs);
+
+        // Advance to next week
+        currentIdx = (currentIdx + 1) % TIMELINE.length;
+      }, 100); 
     }
 
+    // --- INITIALIZE GLOBE ENGINE ---
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-      .pointsData(teamData).pointRadius(0.8).pointColor(d => d.color)
+      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8).pointAltitude(0)
+      .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
       .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color')
-      .ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
-      .onGlobeClick(() => update(true));
+      .onGlobeClick(() => runUpdate(true));
 
     world.controls().autoRotate = true;
     world.cameraPosition({ z: 400 });
 
-    window.world = world;
-    update();
-    timer = setInterval(update, 9000);
+    // Store in global window so functions can find it safely
+    window.myWorld = world;
+
+    // WAIT FOR BOOTUP: Start after 1 second to ensure everything is loaded
+    setTimeout(() => {
+      runUpdate();
+      timer = setInterval(runUpdate, 9000);
+    }, 1000);
   </script>
 </body>
 </html>
