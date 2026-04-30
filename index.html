@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v5.3</title>
+  <title>Pearl 27 - Global Impact Dashboard v5.5</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; cursor: pointer; }
@@ -39,7 +39,7 @@
     <div id="scoreboard">
       <p id="score-label">Total Jobs Created</p>
       <p id="score-count">--</p>
-      <div id="week-indicator">Loading Data...</div>
+      <div id="week-indicator">Loading Global Impact...</div>
     </div>
     <div id="platform-key">
       <div style="margin-bottom:4px; font-weight:bold; color:#00ccff; text-transform: uppercase; font-size: 8px;">Platform Impact</div>
@@ -56,6 +56,7 @@
   <div id="globeViz"></div>
 
   <script>
+    // --- DATA ---
     const TIMELINE = [
       { label: "Feb Week 1", activity: 68, r: 20, li: 19, fb: 29, q: 0 },
       { label: "Feb Week 2", activity: 1779, r: 613, li: 444, fb: 722, q: 0 },
@@ -116,103 +117,73 @@
     });
 
     let currentIdx = 0;
-    let timer;
+    let autoCycle;
 
     function runUpdate(manual = false) {
-      if (manual) { clearInterval(timer); timer = setInterval(runUpdate, 9000); }
+      if (manual) { clearInterval(autoCycle); autoCycle = setInterval(runUpdate, 9000); }
 
       const week = TIMELINE[currentIdx];
       
-      // DEEP RESET
-      if (window.world) {
-          world.arcsData([]);
-          world.ringsData([]);
-      }
+      document.getElementById('week-indicator').innerText = week.label;
+      let totalCount = 0;
+      const arcs = [];
+      const rings = [];
 
-      setTimeout(() => {
-        document.getElementById('week-indicator').innerText = week.label;
-        let weeklyTotalDrums = 0;
-        const newArcs = [];
-        const newRings = [];
-
-        teamData.forEach(hub => {
-          let hDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
-          let hAct = hub.id === 'India' ? (indiaActivity[currentIdx] || 0) : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
-          
-          weeklyTotalDrums += hDrums;
-          document.getElementById(`drums-${hub.id}`).innerText = hDrums;
-          document.getElementById(`act-${hub.id}`).innerText = hAct > 0 ? Math.round(hAct) : '-';
-
-          if (hDrums > 0) {
-              newRings.push({ 
-                  lat: hub.lat, 
-                  lng: hub.lng, 
-                  color: hub.color, 
-                  maxR: Math.sqrt(hDrums) * 1.5, // Aggressive Ring Scaling
-                  propagationSpeed: 1.2
-              });
-          }
-
-          const count = Math.min(10, Math.ceil(hAct / 60)); // More missiles for activity
-          for(let i=0; i < count; i++) {
-            const t = TARGETS[Math.floor(Math.random() * TARGETS.length)];
-            let col = '#ffffff';
-            const r = Math.random();
-            const rRatio = week.r / week.activity;
-            const liRatio = week.li / week.activity;
-            const qRatio = (week.q || 0) / week.activity;
-
-            if (hub.id === 'India') col = '#ff4500';
-            else if (r < rRatio) col = '#ff4500'; 
-            else if (r < rRatio + liRatio) col = '#00ccff';
-            else if (r < rRatio + liRatio + qRatio) col = '#990000'; 
-
-            newArcs.push({ 
-                startLat: hub.lat, 
-                startLng: hub.lng, 
-                endLat: t.lat, 
-                endLng: t.lng, 
-                color: col 
-            });
-          }
-        });
-
-        document.getElementById('score-count').innerText = weeklyTotalDrums;
+      teamData.forEach(hub => {
+        let hDrums = hub.id === 'India' ? 25 : (hub.id === 'Philippines' ? 60 : (weeklyHubData[hub.id]?.d[currentIdx] || 0));
+        let hAct = hub.id === 'India' ? (indiaActivity[currentIdx] || 0) : (weeklyHubData[hub.id]?.a[currentIdx] || 0);
         
-        if (window.world) {
-            world.ringsData(newRings)
-                 .arcDashOffset(0)
-                 .arcsData(newArcs);
+        totalCount += hDrums;
+        document.getElementById(`drums-${hub.id}`).innerText = hDrums;
+        document.getElementById(`act-${hub.id}`).innerText = hAct > 0 ? Math.round(hAct) : '-';
+
+        if (hDrums > 0) {
+          rings.push({ lat: hub.lat, lng: hub.lng, color: hub.color, size: Math.sqrt(hDrums) * 2 });
         }
 
-        currentIdx = (currentIdx + 1) % TIMELINE.length;
-      }, 100); 
+        const count = Math.min(10, Math.ceil(hAct / 60));
+        for(let i=0; i<count; i++) {
+          const t = TARGETS[Math.floor(Math.random() * TARGETS.length)];
+          let col = '#ffffff';
+          const r = Math.random();
+          const rRatio = week.r / week.activity;
+          const liRatio = week.li / week.activity;
+          const qRatio = (week.q || 0) / week.activity;
+
+          if (hub.id === 'India') col = '#ff4500';
+          else if (r < rRatio) col = '#ff4500'; 
+          else if (r < rRatio + liRatio) col = '#00ccff';
+          else if (r < rRatio + liRatio + qRatio) col = '#990000'; 
+
+          arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: col });
+        }
+      });
+
+      document.getElementById('score-count').innerText = totalCount;
+
+      // UPDATE GLOBE LAYERS
+      world.ringsData(rings);
+      world.arcsData(arcs);
+
+      currentIdx = (currentIdx + 1) % TIMELINE.length;
     }
 
     const world = Globe()(document.getElementById('globeViz'))
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-      .pointsData(teamData)
-      .pointColor(d => d.color)
-      .pointRadius(0.8)
-      .pointAltitude(0)
-      .ringsData([])
+      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8)
       .ringColor(d => d.color)
-      .ringMaxRadius(d => d.maxR) 
-      .ringRepeatPeriod(1200)
-      .arcDashLength(0.5)
-      .arcDashGap(2)
-      .arcDashAnimateTime(8000)
-      .arcStroke(0.6) // Thickened Strike
-      .arcColor('color')
+      .ringMaxRadius(d => d.size)
+      .ringRepeatPeriod(1000)
+      .arcDashLength(0.4).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.8).arcColor('color')
       .onGlobeClick(() => runUpdate(true));
 
     world.controls().autoRotate = true;
     world.cameraPosition({ z: 400 });
 
-    window.world = world;
+    // START
     runUpdate();
-    timer = setInterval(runUpdate, 9000);
+    autoCycle = setInterval(runUpdate, 9000);
   </script>
 </body>
 </html>
