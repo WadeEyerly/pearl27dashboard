@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pearl 27 - Global Impact Dashboard v4.2</title>
+  <title>Pearl 27 - Global Impact Dashboard v4.3</title>
   <script src="https://unpkg.com/globe.gl"></script>
   <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; }
@@ -127,10 +127,9 @@
     function runUpdate() {
       const currentWeek = TIMELINE[currentIdx];
       
+      // RE-ANCHOR: Clear and hard reset offset before loading new data
       if (typeof world !== 'undefined') { 
         world.arcsData([]);
-        // SNAPS ANIMATION BACK TO START: No more "backward" drawing
-        world.arcDashOffset(1); 
       }
 
       setTimeout(() => {
@@ -168,20 +167,21 @@
                 else if (rand < rRatio + liRatio) mColor = '#00ccff';
                 else if (rand < rRatio + liRatio + qRatio) mColor = '#990000'; 
               }
+              // Unique IDs ensure each missile is treated as a new launch from hub lat/lng
               arcs.push({ startLat: hub.lat, startLng: hub.lng, endLat: t.lat, endLng: t.lng, color: mColor, id: Math.random() });
             }
           }
         });
 
         if (typeof world !== 'undefined') {
-          world.ringsData(rings).arcsData(arcs);
-          // START NEW DRAW: Begins perfectly from the origin
-          world.arcDashOffset(0); 
+          world.ringsData(rings)
+               .arcDashOffset(0) // Forces all new missiles back to origin (0)
+               .arcsData(arcs);
         }
 
         currentIdx = (currentIdx + 1) % TIMELINE.length;
 
-      }, 200); 
+      }, 100); 
     }
 
     setInterval(runUpdate, 9000);
@@ -191,7 +191,9 @@
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
       .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8).pointAltitude(0)
       .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
-      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color')
+      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000)
+      .arcStroke(0.3) // Precision missile weight
+      .arcColor('color')
       .arcDashOffset(0);
       
     world.controls().autoRotate = true;
