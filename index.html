@@ -21,7 +21,7 @@
     #legend {
       position: absolute; bottom: 15px; right: 15px; pointer-events: auto;
       background: rgba(0, 15, 30, 0.9); padding: 10px; border-radius: 8px;
-      border: 1px solid #00ccff; width: 230px;
+      border: 1px solid #00ccff; width: 230px; max-height: 35vh; overflow-y: auto;
     }
     .legend-header { display: flex; font-weight: bold; color: #00ccff; font-size: 8px; text-transform: uppercase; border-bottom: 1px solid #00ccff33; padding-bottom: 4px; margin-bottom: 6px; }
     .item { display: flex; align-items: center; margin-bottom: 3px; font-size: 9px; }
@@ -95,10 +95,20 @@
       list.innerHTML += `<div class="item"><div class="col-name"><span class="dot" style="background:${d.color}"></span><span style="color:${d.color}">${d.name}</span></div><div class="col-drum" id="drums-${d.id}">${d.staticDrums}</div><div class="col-act" id="act-${d.id}">-</div></div>`;
     });
 
+    const world = Globe()(document.getElementById('globeViz'))
+      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
+      .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8)
+      .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
+      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color');
+    
+    world.controls().autoRotate = true;
+    world.cameraPosition({ z: 400 });
+
     let currentIdx = 0;
     function runUpdate() {
       const week = TIMELINE[currentIdx];
-      if (typeof world !== 'undefined') { world.arcsData([]); }
+      world.arcsData([]); 
 
       setTimeout(() => {
         document.getElementById('week-indicator').innerText = week.label;
@@ -128,22 +138,10 @@
           }
         });
 
-        if (typeof world !== 'undefined') {
-          world.ringsData(rings).arcsData(arcs);
-        }
+        world.ringsData(rings).arcsData(arcs);
         currentIdx = (currentIdx + 1) % TIMELINE.length;
       }, 200); 
     }
-
-    const world = Globe()(document.getElementById('globeViz'))
-      .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-      .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-      .pointsData(teamData).pointColor(d => d.color).pointRadius(0.8)
-      .ringsData([]).ringColor(d => d.color).ringMaxRadius(d => Math.sqrt(d.count) * 0.9).ringRepeatPeriod(1200)
-      .arcDashLength(0.5).arcDashGap(2).arcDashAnimateTime(8000).arcStroke(0.3).arcColor('color');
-    
-    world.controls().autoRotate = true;
-    world.cameraPosition({ z: 400 });
 
     runUpdate();
     setInterval(runUpdate, 9000);
